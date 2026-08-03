@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+      - name: Sync
+        run: uv sync --all-extras
+      - name: Lint
+        run: uv run ruff check src tests
+      - name: Test
+        run: uv run pytest -q
+      - name: Run the demo specs
+        run: |
+          uv run python specs/demo_basic.py
+          uv run python specs/demo_tamper.py
+      - name: Guard against encoding corruption
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          bad = {}
+          for p in list(Path("src").rglob("*.py")) + list(Path(".").glob("*.md")) + list(Path("docs").rglob("*.md")):
+              text = p.read_text(encoding="utf-8")
+              n = sum(1 for c in text if ord(c) > 127)
+              if n:
+                  bad[str(p)] = n
+          if bad:
+              print("::error::Non-ASCII characters found")
+              for f, n in bad.items():
+                  print(f"  {f}: {n}")
+              sys.exit(1)
+          print("All source and docs are pure ASCII")
+          PY
