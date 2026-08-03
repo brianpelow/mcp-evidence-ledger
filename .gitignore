@@ -8,3 +8,7 @@ __pycache__/
 *.ledger.jsonl
 *.head
 !specs/*.ledger.jsonl
+
+# The golden ledger is a committed fixture; keep it tracked.
+!tests/golden/
+!tests/golden/*.ledger.jsonl
